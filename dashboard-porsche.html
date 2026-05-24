@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche Sales Performance Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        
+        :root {
+            --porsche-black: #000000;
+            --porsche-dark-bg: #111111; /* Fundo principal escuro */
+            --porsche-card-bg: #1c1c1c; /* Fundo dos gráficos/tabelas */
+            --porsche-white: #ffffff;
+            --porsche-grey: #e5e5e5;
+            --porsche-gold: #d4af37; /* Destaques em dourado */
+            --border-color: #2a2a2a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--porsche-dark-bg);
+            color: var(--porsche-white);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: var(--porsche-black);
+            color: var(--porsche-white);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--porsche-gold);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* Painel de Filtros Escuro */
+        .filter-panel {
+            background-color: var(--porsche-card-bg);
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+
+        .filter-group select {
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+            background-color: var(--porsche-black);
+            color: var(--porsche-white);
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .filter-group select:focus {
+            border-color: var(--porsche-gold);
+        }
+
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            background-color: var(--porsche-card-bg);
+            padding: 24px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-card h2 {
+            margin-top: 0;
+            font-size: 16px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            color: var(--porsche-white);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 320px;
+            position: relative;
+        }
+
+        /* Tabela de Insights Escura */
+        .table-card {
+            background-color: var(--porsche-card-bg);
+            padding: 24px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 50px;
+        }
+
+        .table-card h2 {
+            margin-top: 0;
+            font-size: 16px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: var(--porsche-black);
+            color: var(--porsche-white);
+            font-weight: 400;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 12px;
+            position: sticky;
+            top: 0;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: #ddd;
+        }
+
+        tr:nth-child(even) td {
+            background-color: #222222;
+        }
+
+       
+        .bar {
+            fill: #444444; /* Barras em cinza discreto inicialmente */
+            transition: fill 0.2s;
+        }
+        .bar:hover {
+            fill: var(--porsche-gold); /* Barra brilha em dourado no hover */
+        }
+        .axis-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            fill: var(--porsche-white);
+        }
+        .grid line {
+            stroke: #252525; /* Linhas de grade sutis */
+        }
+        .domain, .tick line {
+            stroke: #555555; /* Cor dos eixos do gráfico */
+        }
+        .tick text {
+            fill: #aaa; /* Cor do texto dos eixos */
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>Porsche Retail Intelligence</h1>
+            <div class="subtitle">Performance & Business Insights</div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="filter-panel">
+            <div class="filter-group">
+                <label for="filter-model">Porsche Model</label>
+                <select id="filter-model"><option value="all">Todos os Modelos</option></select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-year">Model Year</label>
+                <select id="filter-year"><option value="all">Todos os Anos</option></select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-city">City</label>
+                <select id="filter-city"><option value="all">Todas as Cidades</option></select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-pay">Pay Method</label>
+                <select id="filter-pay"><option value="all">Todos os Métodos</option></select>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="chart-card">
+                <h2>Modelos Vendidos por Volume (Cidades Selecionadas)</h2>
+                <div id="model-chart" class="chart-container"></div>
+            </div>
+            <div class="chart-card">
+                <h2>Distribuição por Ano de Modelo no Período</h2>
+                <div id="year-chart" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <h2>Insights de Carros e Vendas por Cidade (Dados Filtrados)</h2>
+            <div class="table-wrapper">
+                <table id="data-table">
+                    <thead>
+                        <tr>
+                            <th>Cidade</th>
+                            <th>Modelo Porsche</th>
+                            <th>Ano do Modelo</th>
+                            <th>Método de Pagamento</th>
+                            <th>Preço de Venda</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const dataset = [
+            {"model": "718 Cayman", "year": 2022, "city": "Boston", "payMethod": "Credit Card", "price": 79500},
+            {"model": "911 Turbo S", "year": 2024, "city": "Seattle", "payMethod": "Wire Transfer", "price": 235000},
+            {"model": "Cayenne Coupe", "year": 2023, "city": "Austin", "payMethod": "Financing", "price": 112750},
+            {"model": "Macan S", "year": 2021, "city": "Denver", "payMethod": "Cash", "price": 68900},
+            {"model": "Taycan 4S", "year": 2024, "city": "Los Angeles", "payMethod": "Bank Transfer", "price": 121000},
+            {"model": "Panamera 4", "year": 2023, "city": "Miami", "payMethod": "Credit Card", "price": 104500},
+            {"model": "911 Turbo S", "year": 2026, "city": "Boston", "payMethod": "Wire Transfer", "price": 249300},
+            {"model": "Cayenne Coupe", "year": 2024, "city": "Phoenix", "payMethod": "Wire Transfer", "price": 108750},
+            {"model": "Macan Electric", "year": 2026, "city": "Chicago", "payMethod": "Financing", "price": 92600},
+            {"model": "Taycan Turbo", "year": 2025, "city": "Dallas", "payMethod": "ACH Payment", "price": 164000},
+            {"model": "Panamera 4S", "year": 2024, "city": "San Francisco", "payMethod": "Credit Card", "price": 119000},
+            {"model": "911 GT3", "year": 2026, "city": "Las Vegas", "payMethod": "Wire Transfer", "price": 232500},
+            {"model": "Cayenne E-Hybrid", "year": 2023, "city": "Charlotte", "payMethod": "Lease", "price": 96800}
+        ];
+
+        
+        function setupFilters() {
+            const models = [...new Set(dataset.map(d => d.model))].sort();
+            const years = [...new Set(dataset.map(d => d.year))].sort((a,b) => b-a);
+            const cities = [...new Set(dataset.map(d => d.city))].sort();
+            const payMethods = [...new Set(dataset.map(d => d.payMethod))].sort();
+
+            populateSelect("filter-model", models);
+            populateSelect("filter-year", years);
+            populateSelect("filter-city", cities);
+            populateSelect("filter-pay", payMethods);
+
+            
+            d3.selectAll("select").on("change", updateDashboard);
+        }
+
+        function populateSelect(id, items) {
+            const select = d3.select(`#${id}`);
+            items.forEach(item => {
+                select.append("option").attr("value", item).text(item);
+            });
+        }
+
+        
+        function getFilteredData() {
+            const m = d3.select("#filter-model").property("value");
+            const y = d3.select("#filter-year").property("value");
+            const c = d3.select("#filter-city").property("value");
+            const p = d3.select("#filter-pay").property("value");
+
+            return dataset.filter(d => {
+                return (m === "all" || d.model === m) &&
+                       (y === "all" || d.year.toString() === y) &&
+                       (c === "all" || d.city === c) &&
+                       (p === "all" || d.payMethod === p);
+            });
+        }
+
+        
+        const formatCurrency = d3.format("$,.2f");
+
+        
+        function updateDashboard() {
+            const data = getFilteredData();
+            
+            updateBarChart("model-chart", data, "model", "Modelos");
+            updateBarChart("year-chart", data, "year", "Anos");
+            updateTable(data);
+        }
+
+        
+        function updateBarChart(containerId, data, key, labelAxis) {
+            const container = d3.select(`#${containerId}`);
+            container.selectAll("*").remove(); // Limpa estado anterior
+
+            const rect = container.node().getBoundingClientRect();
+            const width = rect.width || 500;
+            const height = 320;
+            const margin = {top: 20, right: 20, bottom: 60, left: 40};
+
+            
+            const counts = d3.rollups(data, v => v.length, d => d[key]);
+            
+            counts.sort((a, b) => d3.ascending(a[0], b[0]));
+
+            const svg = container.append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const x = d3.scaleBand()
+                .domain(counts.map(d => d[0]))
+                .range([margin.left, width - margin.right])
+                .padding(0.3);
+
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(counts, d => d[1]) || 4])
+                .nice()
+                .range([height - margin.bottom, margin.top]);
+
+            
+            svg.append("g")
+                .attr("class", "grid")
+                .attr("transform", `translate(${margin.left},0)`)
+                .call(d3.axisLeft(y).ticks(4).tickSize(-width + margin.left + margin.right).tickFormat(""));
+
+            
+            svg.selectAll(".bar")
+                .data(counts)
+                .enter().append("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d[0]))
+                .attr("y", d => y(d[1]))
+                .attr("width", x.bandwidth())
+                .attr("height", d => height - margin.bottom - y(d[1]));
+
+            
+            svg.append("g")
+                .attr("transform", `translate(0,${height - margin.bottom})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("class", "axis-label")
+                .attr("transform", "rotate(-15)")
+                .style("text-anchor", "end");
+
+            
+            svg.append("g")
+                .attr("transform", `translate(${margin.left},0)`)
+                .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("d")));
+        }
+
+        
+        function updateTable(data) {
+            const tbody = d3.select("#data-table tbody");
+            tbody.selectAll("*").remove();
+
+            if (data.length === 0) {
+                tbody.append("tr").append("td").attr("colspan", 5).style("text-align", "center").text("Nenhum dado encontrado para os filtros selecionados.");
+                return;
+            }
+
+            data.forEach(d => {
+                const tr = tbody.append("tr");
+                tr.append("td").text(d.city);
+                tr.append("td").style("font-weight", "500").text(d.model);
+                tr.append("td").text(d.year);
+                tr.append("td").text(d.payMethod);
+                tr.append("td").text(formatCurrency(d.price));
+            });
+        }
+
+        
+        window.addEventListener("resize", updateDashboard);
+
+        
+        setupFilters();
+        updateDashboard();
+    </script>
+</body>
+</html>
